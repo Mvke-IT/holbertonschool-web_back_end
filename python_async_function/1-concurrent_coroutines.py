@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-""" This async function takes 2 int. Return the list of the delay.  """
-from typing import List
+"""concurrent coroutines"""
 import asyncio
-wait_random = __import__('0-basic_async_syntax').wait_random
+from typing import List
+
+randwait = __import__('0-basic_async_syntax').wait_random
 
 
 async def wait_n(n: int, max_delay: int) -> List[float]:
-    """ Store  the results in a list. """
+    """wait n"""
     routines = [randwait(max_delay) for i in range(n)]
     return [await x for x in asyncio.as_completed(routines)]
