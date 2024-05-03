@@ -1,0 +1,2 @@
+// count the documnets
+db.school.find().itcount();
