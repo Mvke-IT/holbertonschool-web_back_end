@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-""" Task pagination 1 """
+""" simple helper function """
+from typing import Tuple
 import csv
 import math
 from typing import List
-
-
-def index_range(page: int, page_size: int) -> tuple:
-    """ This function returns a tuple of size two containing a start index """
-    return ((page - 1) * page_size, page * page_size)
 
 
 class Server:
@@ -29,10 +25,21 @@ class Server:
 
         return self.__dataset
 
-    def get_page(page: int = 1, page_size: int = 10) -> List[List]:
-        """ Return the appropriate page of the dataset """
-        assert isinstance(page, int) and page > 0
-        assert isinstance(page_size, int) and page_size > 0
+    def get_page(self, page: int = 1, page_size: int = 10) -> List[List]:
+        """ get page"""
+        assert type(page_size) is int and type(page) is int
+        assert page > 0
+        assert page_size > 0
+        self.dataset()
+        i = index_range(page, page_size)
+        if i[0] >= len(self.__dataset):
+            return[]
+        else:
+            return self.__dataset[i[0]:i[1]]
 
-        start, end = index_range(page, page_size)
-        return self.dataset()[start:end]
+
+def index_range(page: int, page_size: int) -> Tuple[int, int]:
+    """ index range """
+    idx = page * page_size - page_size
+    index = idx + page_size
+    return (idx, index)
