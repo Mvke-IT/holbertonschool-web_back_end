@@ -14,5 +14,5 @@ class HolbertonClass {
     return null;
   }
 }
- 
+
 export default HolbertonClass;
