@@ -21,19 +21,23 @@ export default class HolbertonCourse {
   get length() {
     return this._length;
   }
+
   get students() {
     return this._students;
   }
+
   set name(newName) {
     if (typeof newName !== 'string') {
       throw TypeError('name must be a string');
     }
     this._name = newName;
+
   }
   set length(newLength) {
     if (typeof newLength !== 'number') {
       throw TypeError('length must be a number');
     }
+
     this._length = newLength;
   }
   set students(newStudents) {
