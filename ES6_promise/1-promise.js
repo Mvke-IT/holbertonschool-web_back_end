@@ -1,5 +1,6 @@
 function getFullResponseFromAPI(success) {
   eturn new Promise((resolve, reject) => {
+
     if (success) {
       resolve({
         status: 200,
