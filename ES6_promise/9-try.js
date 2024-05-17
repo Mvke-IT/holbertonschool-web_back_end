@@ -4,7 +4,7 @@ export default function guardrail(mathFunction) {
   try {
     array.push(mathFunction());
   } catch (err) {
-  array.push(err.toString());
+    array.push(err.toString());
   } finally {
     array.push('Guardrail was processed');
   }
