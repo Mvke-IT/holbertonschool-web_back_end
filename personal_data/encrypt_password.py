@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
-encrypting passwords
+Encrypting passwords
 """
 import bcrypt
 
 
 def hash_password(password: str) -> bytes:
     """
-    _summary_
+    Function that expects one string argument name password and returns
+    a salted, hashed password, which is a byte string.
     """
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+    bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hash = bcrypt.hashpw(bytes, salt)
+
+    return hash
+
 
 def is_valid(hashed_password: bytes, password: str) -> bool:
     """
-    _summary_
+    Check valid password
     """
-    return bcrypt.checkpw(password.encode(), hashed_password)
+    if bcrypt.checkpw(bytes(password, 'utf-8'), hashed_password):
+        return True
+    return False

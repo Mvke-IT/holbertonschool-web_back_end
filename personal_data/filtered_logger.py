@@ -1,61 +1,105 @@
 #!/usr/bin/env python3
-""" filtered logger """
+"""
+Module that have a function called filter_datum that returns the log message
+obfuscated
+"""
 from typing import List
 import re
 import logging
-from os import environ
+import os
 import mysql.connector
 
-PII_FIELDS = "email", "name", "ssn", "password", "phone"  # Fields that contain Personally Identifiable Information (PII)
 
-def filter_datum(fields: List[str], redaction: str, message: str, separator: str) -> str:
-    """Redacts specified fields in a message."""
-    result = message  # Initialize result with the original message
-    for field in fields:  # Iterate over each field that needs to be redacted
-        construct = f"(?<={field}=)(.*?)(?={separator})"  # Construct regex pattern to find the field's value
-        result = re.sub(construct, redaction, result)  # Replace the field's value with the redaction string
-    return result  # Return the redacted message
+PII_FIELDS = ('name', 'email', 'phone', 'ssn', 'password')
+
+
+def filter_datum(fields: List[str], redaction: str, message: str,
+                 separator: str) -> str:
+    """
+    Function called filter_datum that returns the log message obfuscated
+    """
+    for field in fields:
+        message = re.sub("(?<={:s}=)(.*?)(?={:s})".format(field, separator),
+                         redaction, message)
+    return message
+
 
 class RedactingFormatter(logging.Formatter):
-    """Redacting Formatter class to redact PII in log messages."""
+    """ Redacting Formatter class
+        """
 
-    REDACTION = "***"  # String used to replace PII
-    FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"  # Log message format
-    SEPARATOR = ";"  # Separator used in log messages
+    REDACTION = "***"
+    FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
+    SEPARATOR = ";"
 
     def __init__(self, fields: List[str]):
-        """Constructor to initialize the formatter with fields to redact."""
-        super(RedactingFormatter, self).__init__(self.FORMAT)  # Initialize the base Formatter with the format
-        self.fields: List[str] = fields  # Store the fields to be redacted
+        """ Constructor """
+        super(RedactingFormatter, self).__init__(self.FORMAT)
+        self.fields = fields
 
     def format(self, record: logging.LogRecord) -> str:
-        """Formats the log record and redacts PII."""
-        message: str = super().format(record)  # Get the formatted log message
-        return filter_datum(self.fields, self.REDACTION, message, self.SEPARATOR)  # Redact PII in the message
+        """
+        Method to filter values in incoming log records using filter_datum
+        """
+        message = filter_datum(self.fields, RedactingFormatter.REDACTION,
+                               record.msg, RedactingFormatter.SEPARATOR)
+        message = logging.LogRecord(record.name, record.levelno, None, None,
+                                    message, None, None)
+        return super().format(message)
+
 
 def get_logger() -> logging.Logger:
-    """Creates and configures a logger with PII redaction.
-
-    Returns:
-        logging.Logger: Configured logger instance
     """
-    result: logging.Logger = logging.getLogger("user_data")  # Create a logger named "user_data"
-    result.setLevel(logging.INFO)  # Set the logging level to INFO
-    result.propagate = False  # Prevent log messages from being propagated to higher-level loggers
-    handler = logging.StreamHandler()  # Create a stream handler for logging to the console
-    handler.setFormatter(RedactingFormatter(PII_FIELDS))  # Set the formatter to redact PII
-    result.addHandler(handler)  # Add the handler to the logger
-    return result  # Return the configured logger
+    Logger should be named "user_data" and only log up to logging.INFO level.
+    It should not propagate messages to other loggers. It should have a
+    StreamHandler with RedactingFormatter as formatter.
+    """
+    log = logging.getLogger("user_data")
+    log.setLevel(logging.INFO)
+    log.propagate = False
+    handler = logging.StreamHandler()
+    handler.setFormatter(RedactingFormatter(PII_FIELDS))
+    log.addHandler(handler)
+
+    return log
+
 
 def get_db() -> mysql.connector.connection.MySQLConnection:
-    """Establishes a connection to the MySQL database.
-
-    Returns:
-        mysql.connector.connection.MySQLConnection: Database connection object
     """
-    return mysql.connector.connect(
-        user=environ.get("PERSONAL_DATA_DB_USERNAME"),  # Get the database username from environment variables
-        password=environ.get("PERSONAL_DATA_DB_PASSWORD"),  # Get the database password from environment variables
-        host=environ.get("PERSONAL_DATA_DB_HOST"),  # Get the database host from environment variables
-        database=environ.get("PERSONAL_DATA_DB_NAME")  # Get the database name from environment variables
-    )
+    Returns a connector to the database
+    """
+
+    """
+    Environment variables
+    """
+    username = os.getenv('PERSONAL_DATA_DB_USERNAME') or 'root'
+    password = os.getenv('PERSONAL_DATA_DB_PASSWORD') or ''
+    _host = os.getenv('PERSONAL_DATA_DB_HOST') or 'localhost'
+    db_name = os.getenv('PERSONAL_DATA_DB_NAME')
+
+    """
+    Connection to DataBase
+    """
+    conection = mysql.connector.connection.MySQLConnection(
+        user=username, password=password, host=_host, database=db_name)
+
+    return conection
+
+
+def main():
+    """ Main """
+    db_connection = get_db()
+    log = get_logger()
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT * from users")
+
+    rows = cursor.fetchall()
+    column_names = [column[0] for column in cursor.description]
+    for row in rows:
+        user_info = '; '.join(f"{column_names[i]}={value}" for i, value in
+                              enumerate(row))
+        log.info(user_info)
+
+
+if __name__ == '__main__':
+    main()
