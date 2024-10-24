@@ -1,100 +1,70 @@
 #!/usr/bin/env python3
 """
-DB module
+BD class
 """
+
 from sqlalchemy import create_engine
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.exc import NoResultFound
+from typing import TypeVar
 from user import Base, User
-from typing import Union
+
+
+DATA = ['id', 'email', 'hashed_password', 'session_id', 'reset_token']
 
 
 class DB:
-    """
-    DB class
-    """
 
-    def __init__(self) -> None:
-        """
-        Initialize a new DB instance
-        """
-        self._engine = create_engine("sqlite:///a.db")
+    def __init__(self):
+        self._engine = create_engine("sqlite:///a.db", echo=False)
         Base.metadata.drop_all(self._engine)
         Base.metadata.create_all(self._engine)
         self.__session = None
 
     @property
-    def _session(self) -> Session:
-        """
-        Memoized session object
-        """
+    def _session(self):
         if self.__session is None:
             DBSession = sessionmaker(bind=self._engine)
             self.__session = DBSession()
         return self.__session
 
     def add_user(self, email: str, hashed_password: str) -> User:
+        """add user to database
+        Args:
+            email (string): email of user
+            hashed_password (string): password of user
+        Returns:
+            User: user created
         """
-        Creates a new User object using 'email' and 'hashed_password'
-        correspondingly, adds the data to 'self's DB file,
-        and returns it.
-        """
-        RESULT: User = User(
-            email=email,
-            hashed_password=hashed_password,
-        )
-
-        self._session.add(RESULT)
-        self._session.commit()
-
-        return RESULT
+        if not email or not hashed_password:
+            return
+        user = User(email=email, hashed_password=hashed_password)
+        session = self._session
+        session.add(user)
+        session.commit()
+        return user
 
     def find_user_by(self, **kwargs) -> User:
+        """find user by some arguments
+        Returns:
+            User: user found or raise error
         """
-        Finds the first row in the 'users' table
-        that matches the 'kwargs'.
-
-        Then, returns the row as a User object.
-
-        If the 'kwargs' don't match the definition of 'User',
-        this method raises 'InvalidRequestError'.
-
-        If no matching 'User' row is found,
-        this method raises 'NoResultFound'.
-        """
-        RESULT: Union[User, None] = self._session.query(User) \
-            .filter_by(**kwargs) \
-            .first()
-
-        if RESULT is None:
+        user = self._session.query(User).filter_by(**kwargs).first()
+        if not user:
             raise NoResultFound
-
-        return RESULT
+        return user
 
     def update_user(self, user_id: int, **kwargs) -> None:
+        """Update user
+        Args:
+            user_id (int): id of user
         """
-        Finds the 'User' with 'user_id' as its 'id'
-        in 'self's DB file, and updates the row with
-        'kwargs'.
-
-        This method uses 'self.find_user_by(id=user_id)'
-        to find the user.
-
-        So, if a user with 'user_id' as
-        its 'id' doesn't exist, this method also raises
-        NoResultFound.
-
-        And if the 'kwargs' don't have the correct attributes,
-        this method raises a ValueError.
-        """
-        USER: User = self.find_user_by(id=user_id)
-
-        if 'id' in kwargs:
-            raise ValueError("Cannot update 'id' of 'User'.")
-
-        for attr, value in kwargs.items():
-            if attr not in USER.__dict__.keys():
-                raise ValueError(f"'User' object has no attribute '{attr}'")
-            setattr(USER, attr, value)
+        user = self.find_user_by(id=user_id)
+        for key, val in kwargs.items():
+            if key not in DATA:
+                raise ValueError
+            setattr(user, key, val)
+        self._session.commit()
+        return None
